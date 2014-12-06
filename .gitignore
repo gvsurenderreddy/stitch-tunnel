@@ -3,4 +3,6 @@
 *.o
 *.pyc
 stitch_tun
+*.log
+
 

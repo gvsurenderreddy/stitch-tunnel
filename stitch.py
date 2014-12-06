@@ -56,7 +56,7 @@ def main():
                     , json_stitch_resp['network'])
 
                     try:
-                        ret = subprocess.check_output(['./tun/stitch_tun','-i',str(device.ip.ip),'-p',str(device.ip.prefixlen)])
+                        ret = subprocess.check_output(['./tun/stitch_tun','-i',str(device.ip.ip),'-p',str(device.ip.prefixlen),'-s','stitch-dp'])
                     except subprocess.CalledProcessError as e:
                         print "Could not create the tunnel e"
 

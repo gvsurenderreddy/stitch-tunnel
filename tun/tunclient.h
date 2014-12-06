@@ -1,0 +1,12 @@
+#ifndef __TUNCLIENT_H__
+#define __TUNCLIENT_H__  
+
+#define ERR_CODE_TUNN_CREATE 1
+#define ERR_CODE_SOCK_CREATE 2
+#define ERR_CODE_TUN_IF_CFG 3
+#define ERR_CODE_IP 4
+#define ERR_CODE_INCORRECT_PREFIX_LEN 5
+#define ERR_CODE_STITCH_DP 6
+#define ERR_CODE_MISSING_ARG 7
+#define ERR_CODE_UNKOWN_OPT 8
+#endif //__TUNCLIENT_H__  

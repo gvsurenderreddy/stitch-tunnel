@@ -8,8 +8,13 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include "tunclient.h"
+#include "stitch_log.h"
 
 char tun_name[IFTUNNAMESZ];
+char log_file_name[] = "stitch_tun.log";
 
 int main(int argc, char* argv[]) {
 	int tun_fd, if_fd, nread = 0;
@@ -20,12 +25,26 @@ int main(int argc, char* argv[]) {
 	struct in6_addr ipv6_addr;
 	int c, result, prefix_len;
 	int status, pid;
-	char ip6[128]; //string representation of IPv6
+	char ip6[128], stitch_dp_ip6[128]; //string representation of IPv6
+	char stitch_dp[128]; /*DNS name of the stitch data-plane*/
 	struct ifreq ifr;
+	struct addrinfo *stitch_dp_addr;
+
+	FILE* log_fd = fopen(log_file_name, "w");
+
+	if (!log_fd) {
+		perror("Unable to open the log file");
+		exit(1);
+	}
+
+	STITCH_INFO_LOG("*****Starting stitch log***********\n");
+
+
+
 
 	if(tun_fd < 0){
-		perror("Allocating interface");
-		exit(1);
+		STITCH_ERR_LOG("Allocating interface %s\n", strerror(errno));
+		exit(ERR_CODE_TUNN_CREATE);
 	}
 
 	/*
@@ -37,8 +56,9 @@ int main(int argc, char* argv[]) {
 	 */
 	if_fd = socket(AF_INET6, SOCK_DGRAM, IPPROTO_IP);
 	if (if_fd < 0 ) {
-		perror("Bad socket for interface");
-		exit(2);
+		STITCH_ERR_LOG("Bad socket for interface %s.\n",
+				strerror(errno));
+		exit(ERR_CODE_SOCK_CREATE);
 	}
 
 	 ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
@@ -46,49 +66,73 @@ int main(int argc, char* argv[]) {
 	 status = ioctl(if_fd, SIOCSIFFLAGS, &ifr);
 
 	 if (status < 0) {
-	 	perror("Could not bring the tunnel interface up");
-		exit(3);
+		 STITCH_ERR_LOG("Could not bring the tunnel interface up %s.\n", 
+				 strerror(errno));
+		exit(ERR_CODE_TUN_IF_CFG);
 	 }
 
-	 printf("Interface configuration for %s returned %d with errno:%d\n",  tun_name, status, errno);
+	 STITCH_DBG_LOG("Interface configuration for %s returned %d with errno:%d\n",  tun_name, status, errno);
 
 
 	/*
 	 * Parse the command line parameters
 	 */
 	opterr = 0;
-	while ((c = getopt (argc, argv, "i:p:")) != -1) {
+	while ((c = getopt (argc, argv, "i:p:s:l")) != -1) {
 		switch(c) {
 			case  'i':
 				/*network address*/
 				if ((result = inet_pton(AF_INET6, optarg, &ipv6_addr)) < 1) {
-					printf("Unable to convert argument:%s to IPv6 address.\n", optarg);
+					STITCH_ERR_LOG("Unable to convert argument:%s to IPv6 address.\n", optarg);
+					exit(4);
 				}
-				printf(" Got IPv6 address:%s\n", optarg);
+				STITCH_DBG_LOG("Got IPv6 address:%s\n", optarg);
 				//store the v6 address as a string representation
 				inet_ntop(AF_INET6, &ipv6_addr, ip6, sizeof(ip6));
-				printf("Stored the IPv6 address %s\n", ip6);
+				STITCH_DBG_LOG("Stored the IPv6 address %s\n", ip6);
 
 				break;
 			case 'p':
 				/*prefix length*/
 				prefix_len = atoi(optarg);
 				if (prefix_len <= 0 || prefix_len > 128) {
-					printf("Invalid prefix length %d.!!\n", prefix_len);
-					return 1;
+					STITCH_ERR_LOG("Invalid prefix length %d.!!\n", prefix_len);
+					exit(ERR_CODE_INCORRECT_PREFIX_LEN);
 				}
-				printf("Got prefix length:%d\n", prefix_len);
+				STITCH_DBG_LOG("Got prefix length:%d\n", prefix_len);
 				//append it to the ip6 string
 				snprintf(ip6+strlen(ip6), sizeof(ip6) - strlen(ip6),"/%d", prefix_len);
 				break;
+			case 's':
+				/*The stitich data-plane module to connect to*/
+				strncpy(stitch_dp, optarg, sizeof(stitch_dp));
+				/*Resolve the address */
+				if (getaddrinfo((const char*)stitch_dp, NULL, NULL, &stitch_dp_addr) < 0 ) {
+					STITCH_ERR_LOG("Unable to resolve the Stitch dataplane-module %s:%s\n", 
+							stitch_dp, strerror(errno)); 
+
+					exit(ERR_CODE_STITCH_DP);
+				}
+				if (stitch_dp_addr->ai_family == AF_INET) {
+					inet_ntop(AF_INET, 
+							&((struct sockaddr_in*)stitch_dp_addr->ai_addr)->sin_addr, 
+							stitch_dp_ip6, sizeof(stitch_dp_ip6));
+				} else {
+					inet_ntop(AF_INET, 
+							&((struct sockaddr_in6*)stitch_dp_addr->ai_addr)->sin6_addr, 
+							stitch_dp_ip6, sizeof(stitch_dp_ip6));
+				}
+				STITCH_DBG_LOG("Resolved address for Stitch dataplane-module %s address-family:%d(AF_INET:%d, AF_INET6:%d),"
+				" ip:%s\n", stitch_dp, stitch_dp_addr->ai_family, AF_INET, AF_INET6, stitch_dp_ip6);
+				break;
 			case '?':
 				if (optopt == 'i' || optopt == 'p'){
-					fprintf(stderr, "Option -%c requires an argument.\n", optopt);
+					STITCH_ERR_LOG("Option -%c requires an argument.\n", optopt);
 				}
-				return 1;
+				exit(ERR_CODE_MISSING_ARG);
 			default:
-				fprintf(stderr, "Unknown option %c.\n", optopt);
-				exit(-1);
+				STITCH_ERR_LOG("Unknown option %c.\n", optopt);
+				exit(ERR_CODE_UNKOWN_OPT);
 		}
 	}
 

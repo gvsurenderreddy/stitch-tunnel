@@ -1,10 +1,11 @@
 CFLAGS=-Wall -g
 CC = gcc
-INCLUDES = -I./ \
- 	   -I./linux
+INCLUDES = -I./
+BUILD_DIR = build/
+STATIC_LINKER = ar
 
 #deifne the C source files
-SRCS = tunclient.c
+SRCS = tun.c 
 
 # define the C object files 
 # 
@@ -15,40 +16,31 @@ SRCS = tunclient.c
 # with the .o suffix
 #
 OBJS = $(SRCS:.c=.o)
-MODULES := linux
-BUILD_DIR = $(shell pwd)/build
-LIB_DIR = $(BUILD_DIR)/lib
-LIBRARIES = -ltun \
-	    -lpthread 
-LIBRARY_PATH = -L$(BUILD_DIR)/lib
 
-# define the executable file 
-MAIN = stitch_tun
+LIB = libtun.a
+
 #
 # The following part of the makefile is generic; it can be used to 
 # build any executable just by changing the definitions above and by
 # deleting dependencies appended to the file from 'make depend'
 #
 #
-.PHONY: all depend clean $(MODULES)
+.PHONY: depend clean
 #
-all:    $(MAIN)
-	@echo Compiled $(MAIN) .... 
-#
-$(MAIN): $(MODULES) 
-	$(CC) $(CFLAGS) $(INCLUDES) $(SRCS) -o $(MAIN) $(LIBRARY_PATH) $(LIBRARIES) $(LFLAGS)
-
-$(MODULES):
-	mkdir -p $(BUILD_DIR)
-	mkdir -p $(LIB_DIR)
-	$(MAKE) --directory=$@ BUILD_LIB_DIR=$(LIB_DIR)
+all:    $(OBJS) $(LIB)
+	@echo Compiled $(OBJS) .... 
 
 # this is a suffix replacement rule for building .o's from .c's
 # it uses automatic variables $<: the name of the prerequisite of
 # # the rule(a .c file) and $@: the name of the target of the rule (a .o file) 
 # # (see the gnu make manual section about automatic variables)
 .c.o:
-	$(CC) $(CFLAGS) $(INCLUDES) -c $<  -o $@
+	mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(INCLUDES) -c $<  -o $(BUILD_DIR)/$@
+
+$(LIB):
+	$(STATIC_LINKER) -cvq $(BUILD_DIR)/$(LIB) $(BUILD_DIR)/*.o
+	mv $(BUILD_DIR)/$(LIB) $(BUILD_LIB_DIR)
 
 clean:
 	$(RM) *.o *~ $(MAIN)

@@ -10,6 +10,7 @@
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <pthread.h>
 #include "tunclient.h"
 #include "stitch_log.h"
 
@@ -141,21 +142,21 @@ int main(int argc, char* argv[]) {
 	 */
 	pid = fork();
 	if (pid == 0) {
-		printf("In child process executing ifconfig command for inet6 address %s\n", ip6);
+		STITCH_DBG_LOG("In child process executing ifconfig command for inet6 address %s\n", ip6);
 		status = execv("/bin/ifconfig", (char *[]){"ifconfig", tun_name, "inet6", "add", ip6, NULL});
 		if (status < 0) {
-			printf("Error occured executing the execv command:%s(%d)\n", strerror(errno), errno);
+			STITCH_ERR_LOG("Error occured executing the execv command:%s(%d)\n", strerror(errno), errno);
 		}
 		exit(errno);
 	}
 
 	if (pid < 0) {
-		printf("Unable to fork ... \n");
-		return -1;
+		STITCH_ERR_LOG("Unable to fork ... \n");
+		exit(ERR_CODE_FORK);
 	} else  {
-		printf("Waiting for the child process %d.\n", pid);
+		STITCH_DBG_LOG("Waiting for the child process %d.\n", pid);
 		pid = waitpid(pid, &status, WNOHANG);
-		printf("Child process done.\n");
+		STITCH_DBG_LOG("Child process done.\n");
 	}
 
 
@@ -164,12 +165,12 @@ int main(int argc, char* argv[]) {
 		/* Note that "buffer" should be at least the MTU size of the interface, eg 1500 bytes */
 		nread = read(tun_fd,buffer,sizeof(buffer));
 		if(nread < 0) {
-			perror("Reading from interface");
+			STITCH_DBG_LOG("Tunnel interface closed.\n");
 			close(tun_fd);
-			exit(1);
+			exit(ERR_CODE_TUN_FD_CLOSE);
 		}
 
 		/* Do whatever with the data */
-		printf("Read %d bytes from device %s\n", nread, tun_name);
+		STITCH_DBG_LOG("Read %d bytes from device %s\n", nread, tun_name);
 	}
 }

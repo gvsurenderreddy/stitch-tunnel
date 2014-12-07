@@ -4,5 +4,6 @@
 *.pyc
 stitch_tun
 *.log
+build/
 
 

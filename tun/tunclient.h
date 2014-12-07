@@ -9,4 +9,6 @@
 #define ERR_CODE_STITCH_DP 6
 #define ERR_CODE_MISSING_ARG 7
 #define ERR_CODE_UNKOWN_OPT 8
+#define ERR_CODE_TUN_FD_CLOSE 9
+#define ERR_CODE_FORK 10
 #endif //__TUNCLIENT_H__  

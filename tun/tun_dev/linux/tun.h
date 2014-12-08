@@ -8,5 +8,8 @@
 #include <fcntl.h>
 
 #define IFTUNNAMESZ 80
-int tun_alloc(char *dev, int flags);
+
+/*Error codes*/
+int tun_alloc(char *dev);
+int tun_up(char *dev);
 #endif

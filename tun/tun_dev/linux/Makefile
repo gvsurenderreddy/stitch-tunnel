@@ -1,6 +1,9 @@
-CFLAGS=-Wall -g
+CFLAGS=-Wall -g -D$(OS)
 CC = gcc
-INCLUDES = -I./
+INCLUDES = -I./\
+ 	   -I$(STITCH_TUN_SRC)/\
+ 	   -I$(STITCH_TUN_SRC)/log/
+
 BUILD_DIR = build/
 STATIC_LINKER = ar
 

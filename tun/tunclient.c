@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include "tun.h"
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
@@ -12,7 +11,8 @@
 #include <netdb.h>
 #include <pthread.h>
 #include "tunclient.h"
-#include "stitch_log.h"
+#include "log/stitch_log.h"
+#include "tun_dev/tun_dev.h"
 #include "pkt_process/tun_pkt_hdlr.h"
 #include "pkt_process/tun_pkt_recv.h"
 #include "pkt_process/tun_pkt_send.h"
@@ -27,7 +27,6 @@ int main(int argc, char* argv[]) {
 	int status, pid;
 	char ip6[128], stitch_dp_ip6[128]; //string representation of IPv6
 	char stitch_dp[128]; /*DNS name of the stitch data-plane*/
-	struct ifreq ifr;
 	struct addrinfo *stitch_dp_addr;
 	stitch_conn_descr_t stitch_conn;
 	pthread_t recv_thread, snd_thread;
@@ -38,12 +37,12 @@ int main(int argc, char* argv[]) {
 	socklen_t cli_udp_addr_len;
 
 	strcpy(stitch_conn.tun_dev, "tun0");
-	stitch_conn.stitch_tun_fd = tun_alloc(stitch_conn.tun_dev, IFF_TUN | IFF_NO_PI);  /* tun interface */
+	stitch_conn.stitch_tun_fd = tun_alloc(stitch_conn.tun_dev);  /* tun interface */
 	log_fd = fopen(log_file_name, "w");
 
 	if (!log_fd) {
 		perror("Unable to open the log file");
-		exit(1);
+		exit(ERR_CODE_LOG);
 	}
 
 	STITCH_INFO_LOG("*****Starting stitch log***********\n");
@@ -56,31 +55,14 @@ int main(int argc, char* argv[]) {
 		exit(ERR_CODE_TUNN_CREATE);
 	}
 
-	/*
-	 * bring the tunnel device up.
-	 */
-	strncpy(ifr.ifr_name, stitch_conn.tun_dev, IFNAMSIZ);
-	/*
-	 * Create a socket to be used to configure the ioctl interface
-	 */
-	if_fd = socket(AF_INET6, SOCK_DGRAM, IPPROTO_IP);
-	if (if_fd < 0 ) {
-		STITCH_ERR_LOG("Bad socket for interface %s.\n",
-				strerror(errno));
-		exit(ERR_CODE_SOCK_CREATE);
+	/* Tunnel creation successful. Now bring the tunnel up*/
+	status = tun_up(stitch_conn.tun_dev);
+
+	if (status) {
+		/* We were not able to bring the tunnel device up*/
+		STITCH_ERR_LOG("We were not able to bring the tunnel up:%d\n", status);
+		exit(ERR_CODE_TUNN_UP);
 	}
-
-	 ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
-
-	 status = ioctl(if_fd, SIOCSIFFLAGS, &ifr);
-
-	 if (status < 0) {
-		 STITCH_ERR_LOG("Could not bring the tunnel interface up %s.\n", 
-				 strerror(errno));
-		exit(ERR_CODE_TUN_IF_CFG);
-	 }
-
-	 STITCH_DBG_LOG("Interface configuration for %s returned %d with errno:%d\n",  stitch_conn.tun_dev, status, errno);
 
 
 	/*

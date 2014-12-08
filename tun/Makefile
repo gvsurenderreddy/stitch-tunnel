@@ -1,7 +1,7 @@
-CFLAGS=-Wall -g
+CFLAGS=-Wall -g -D$(OS)
 CC = gcc
 INCLUDES = -I./ \
- 	   -I./linux\
+ 	   -I./tun_dev\
 	   -I./log
 
 #deifne the C source files
@@ -16,7 +16,7 @@ SRCS = tunclient.c
 # with the .o suffix
 #
 OBJS = $(SRCS:.c=.o)
-MODULES := linux pkt_process
+MODULES := tun_dev pkt_process
 BUILD_DIR = $(shell pwd)/build
 STITCH_TUN_SRC = $(shell pwd)
 LIB_DIR = $(BUILD_DIR)/lib
@@ -43,7 +43,7 @@ $(MAIN): $(MODULES)
 $(MODULES):
 	mkdir -p $(BUILD_DIR)
 	mkdir -p $(LIB_DIR)
-	$(MAKE) --directory=$@ BUILD_LIB_DIR=$(LIB_DIR) STITCH_TUN_SRC=$(STITCH_TUN_SRC)
+	$(MAKE) --directory=$@ BUILD_LIB_DIR=$(LIB_DIR) STITCH_TUN_SRC=$(STITCH_TUN_SRC) OS=$(OS)
 
 # this is a suffix replacement rule for building .o's from .c's
 # it uses automatic variables $<: the name of the prerequisite of

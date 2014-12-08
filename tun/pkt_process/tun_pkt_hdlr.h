@@ -1,8 +1,8 @@
 #ifndef __STITCH_TUN_PKT_HDLR__
 #define __STITCH_TUN_PKT_HDLR__
 #include <netinet/in.h>
-#define ERR_CODE_TH_TUN_FD_CLOSE 1
-#define ERR_CODE_TH_SOCK_FD_CLOSE 2
+#define STITCH_DP_PORT 32000
+
 typedef struct stitch_conn_descr_s {
 	char tun_dev[64];
 	int stitch_tun_fd;

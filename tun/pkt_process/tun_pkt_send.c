@@ -33,7 +33,7 @@ void* send_tun(void* stitch_conn)
 		if(nread < 0) {
 			STITCH_ERR_LOG("UDP socket to stitch-dp closed.\n");
 			close(stitch_descr->stitch_tun_fd);
-			pthread_exit((void*)ERR_CODE_TH_SOCK_FD_CLOSE);
+			pthread_exit((void*) (-1));
 		}
 
 		/* The payload should be an IPv6 packet */
@@ -47,10 +47,10 @@ void* send_tun(void* stitch_conn)
 			/* write the IP packet out */
 			if ( (nwrite = write(stitch_descr->stitch_tun_fd, buffer, nread)) < 0 ) {
 				STITCH_ERR_LOG("The tunnel device has closed.\n");
-				pthread_exit((void*)ERR_CODE_TH_TUN_FD_CLOSE);
+				pthread_exit((void*)(-1));
 			};
 		} else {
-			STITCH_DBG_LOG("Received a non-IP frame.\n");
+			STITCH_DBG_LOG("Received a non-IPv6 frame.\n");
 		}
 	}
 

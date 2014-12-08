@@ -33,7 +33,7 @@ void* recv_tun(void* stitch_conn)
 		if(nread < 0) {
 			STITCH_DBG_LOG("Tunnel interface closed.\n");
 			close(stitch_descr->stitch_tun_fd);
-			pthread_exit((void*)ERR_CODE_TH_TUN_FD_CLOSE);
+			pthread_exit((void*)(-1));
 		}
 
 		/* Do whatever with the data */
@@ -46,19 +46,28 @@ void* recv_tun(void* stitch_conn)
 			STITCH_DBG_LOG("Read an IP6 frame \n");
 			/* Send to stitch-DP . Kernel does UDP encapsulation*/
 			if (stitch_descr->stitch_dp_addr) {
-			if ((nwrite = 	sendto(stitch_descr->stitch_dp_fd, buffer, nread, 0, 
-						(struct sockaddr*) stitch_descr->stitch_dp_addr, sizeof(struct sockaddr_in))) < 0) {
-						STITCH_ERR_LOG("UDP socke to stitch-dp close with error:%s\n", strerror(errno));
+				/* IPv4 */
+				if ((nwrite = 	sendto(stitch_descr->stitch_dp_fd, buffer, nread, 0, 
+								(struct sockaddr*) stitch_descr->stitch_dp_addr, 
+								sizeof(struct sockaddr_in))) < 0) {
+					STITCH_ERR_LOG("UDP socke to stitch-dp close with error:%s\n", 
+							strerror(errno));
+					pthread_exit((void*)(-1));
 
-						};
+				};
 			} else {
+				/* IPv6 */
 				if ( (nwrite = sendto(stitch_descr->stitch_dp_fd, buffer, nread, 0, 
-						(struct sockaddr*) stitch_descr->stitch_dp_addr6, sizeof(struct sockaddr_in6))) < 0) {
-						STITCH_ERR_LOG("UDP socke to stitch-dp close with error:%s\n", strerror(errno));
-						};
+								(struct sockaddr*) stitch_descr->stitch_dp_addr6, 
+								sizeof(struct sockaddr_in6))) < 0) {
+					STITCH_ERR_LOG("UDP socket to stitch-dp close with error:%s\n", 
+							strerror(errno));
+					pthread_exit((void*)(-1));
+				};
 			}
 		} else {
-			STITCH_DBG_LOG("Received a non-IP frame.\n");
+			/* We should never expect anything other an IPv6 frame here */
+			STITCH_DBG_LOG("Received a non-IPv6 frame.\n");
 		}
 	}
 

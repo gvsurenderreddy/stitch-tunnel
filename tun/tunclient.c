@@ -13,25 +13,33 @@
 #include <pthread.h>
 #include "tunclient.h"
 #include "stitch_log.h"
+#include "pkt_process/tun_pkt_hdlr.h"
+#include "pkt_process/tun_pkt_recv.h"
+#include "pkt_process/tun_pkt_send.h"
 
-char tun_name[IFTUNNAMESZ];
 char log_file_name[] = "stitch_tun.log";
+FILE* log_fd;
 
 int main(int argc, char* argv[]) {
-	int tun_fd, if_fd, nread = 0;
-	char buffer[2048]; //2k buffer
+	int if_fd;
 	/* Connect to the device */
-	strcpy(tun_name, "tun0");
-	tun_fd = tun_alloc(tun_name, IFF_TUN | IFF_NO_PI);  /* tun interface */
-	struct in6_addr ipv6_addr;
 	int c, result, prefix_len;
 	int status, pid;
 	char ip6[128], stitch_dp_ip6[128]; //string representation of IPv6
 	char stitch_dp[128]; /*DNS name of the stitch data-plane*/
 	struct ifreq ifr;
 	struct addrinfo *stitch_dp_addr;
+	stitch_conn_descr_t stitch_conn;
+	pthread_t recv_thread, snd_thread;
+	int *th_retval;
+	struct sockaddr_in cli_udp_addr;
+	struct sockaddr_in6 cli_udp_addr6;
+	struct sockaddr *cli_udp;
+	socklen_t cli_udp_addr_len;
 
-	FILE* log_fd = fopen(log_file_name, "w");
+	strcpy(stitch_conn.tun_dev, "tun0");
+	stitch_conn.stitch_tun_fd = tun_alloc(stitch_conn.tun_dev, IFF_TUN | IFF_NO_PI);  /* tun interface */
+	log_fd = fopen(log_file_name, "w");
 
 	if (!log_fd) {
 		perror("Unable to open the log file");
@@ -43,7 +51,7 @@ int main(int argc, char* argv[]) {
 
 
 
-	if(tun_fd < 0){
+	if(stitch_conn.stitch_tun_fd < 0){
 		STITCH_ERR_LOG("Allocating interface %s\n", strerror(errno));
 		exit(ERR_CODE_TUNN_CREATE);
 	}
@@ -51,7 +59,7 @@ int main(int argc, char* argv[]) {
 	/*
 	 * bring the tunnel device up.
 	 */
-	strncpy(ifr.ifr_name, tun_name, IFNAMSIZ);
+	strncpy(ifr.ifr_name, stitch_conn.tun_dev, IFNAMSIZ);
 	/*
 	 * Create a socket to be used to configure the ioctl interface
 	 */
@@ -72,7 +80,7 @@ int main(int argc, char* argv[]) {
 		exit(ERR_CODE_TUN_IF_CFG);
 	 }
 
-	 STITCH_DBG_LOG("Interface configuration for %s returned %d with errno:%d\n",  tun_name, status, errno);
+	 STITCH_DBG_LOG("Interface configuration for %s returned %d with errno:%d\n",  stitch_conn.tun_dev, status, errno);
 
 
 	/*
@@ -83,13 +91,13 @@ int main(int argc, char* argv[]) {
 		switch(c) {
 			case  'i':
 				/*network address*/
-				if ((result = inet_pton(AF_INET6, optarg, &ipv6_addr)) < 1) {
+				if ((result = inet_pton(AF_INET6, optarg, &stitch_conn.tun_ip6_addr)) < 1) {
 					STITCH_ERR_LOG("Unable to convert argument:%s to IPv6 address.\n", optarg);
 					exit(4);
 				}
 				STITCH_DBG_LOG("Got IPv6 address:%s\n", optarg);
 				//store the v6 address as a string representation
-				inet_ntop(AF_INET6, &ipv6_addr, ip6, sizeof(ip6));
+				inet_ntop(AF_INET6, &stitch_conn.tun_ip6_addr, ip6, sizeof(ip6));
 				STITCH_DBG_LOG("Stored the IPv6 address %s\n", ip6);
 
 				break;
@@ -118,10 +126,27 @@ int main(int argc, char* argv[]) {
 					inet_ntop(AF_INET, 
 							&((struct sockaddr_in*)stitch_dp_addr->ai_addr)->sin_addr, 
 							stitch_dp_ip6, sizeof(stitch_dp_ip6));
+					stitch_conn.stitch_dp_addr = (struct sockaddr_in*)stitch_dp_addr->ai_addr;
+					//set the stitch DP port. Ideally this should be coming
+					//from the webservice.
+					stitch_conn.stitch_dp_addr->sin_port = htons(STITCH_DP_PORT);
+					cli_udp_addr.sin_family = AF_INET;
+					cli_udp_addr.sin_port = htons(STITCH_DP_PORT);
+					cli_udp_addr.sin_addr.s_addr = INADDR_ANY;
+					cli_udp = (struct sockaddr*)&cli_udp_addr;
+					cli_udp_addr_len = sizeof(cli_udp_addr);
 				} else {
 					inet_ntop(AF_INET, 
 							&((struct sockaddr_in6*)stitch_dp_addr->ai_addr)->sin6_addr, 
 							stitch_dp_ip6, sizeof(stitch_dp_ip6));
+					stitch_conn.stitch_dp_addr6 = (struct sockaddr_in6*)stitch_dp_addr->ai_addr;
+					stitch_conn.stitch_dp_addr6->sin6_port = htons(STITCH_DP_PORT);
+					memset(&cli_udp_addr6, 0, sizeof(cli_udp_addr6));
+					cli_udp_addr.sin_family = AF_INET6;
+					cli_udp_addr.sin_port = htons(STITCH_DP_PORT);
+					cli_udp = (struct sockaddr*)&cli_udp_addr6;
+					cli_udp_addr_len = sizeof(cli_udp_addr6);
+					
 				}
 				STITCH_DBG_LOG("Resolved address for Stitch dataplane-module %s address-family:%d(AF_INET:%d, AF_INET6:%d),"
 				" ip:%s\n", stitch_dp, stitch_dp_addr->ai_family, AF_INET, AF_INET6, stitch_dp_ip6);
@@ -143,7 +168,7 @@ int main(int argc, char* argv[]) {
 	pid = fork();
 	if (pid == 0) {
 		STITCH_DBG_LOG("In child process executing ifconfig command for inet6 address %s\n", ip6);
-		status = execv("/bin/ifconfig", (char *[]){"ifconfig", tun_name, "inet6", "add", ip6, NULL});
+		status = execv("/bin/ifconfig", (char *[]){"ifconfig", stitch_conn.tun_dev, "inet6", "add", ip6, NULL});
 		if (status < 0) {
 			STITCH_ERR_LOG("Error occured executing the execv command:%s(%d)\n", strerror(errno), errno);
 		}
@@ -156,21 +181,32 @@ int main(int argc, char* argv[]) {
 	} else  {
 		STITCH_DBG_LOG("Waiting for the child process %d.\n", pid);
 		pid = waitpid(pid, &status, WNOHANG);
+		if (status != 0) {
+			STITCH_ERR_LOG("Was not able to configure IP address on tunnel interface:%d",
+			status);
+			exit(status);
+		}
 		STITCH_DBG_LOG("Child process done.\n");
 	}
 
-
-	/* Now read data coming from the kernel */
-	while(1) {
-		/* Note that "buffer" should be at least the MTU size of the interface, eg 1500 bytes */
-		nread = read(tun_fd,buffer,sizeof(buffer));
-		if(nread < 0) {
-			STITCH_DBG_LOG("Tunnel interface closed.\n");
-			close(tun_fd);
-			exit(ERR_CODE_TUN_FD_CLOSE);
-		}
-
-		/* Do whatever with the data */
-		STITCH_DBG_LOG("Read %d bytes from device %s\n", nread, tun_name);
+	/*Create a UDP socket to create the external tunnel to the stitch datapath-plane*/
+	stitch_conn.stitch_dp_fd = socket(stitch_dp_addr->ai_family, SOCK_DGRAM, 0) ;
+	if (stitch_conn.stitch_dp_fd < 0 ) {
+		STITCH_ERR_LOG("Unable to create the stitch-datapath socket:%s\n", strerror(errno));
+		exit(ERR_CODE_STITCH_DP_SOCKET);
 	}
+	/* bind the socket to a particular port */
+	bind(stitch_conn.stitch_dp_fd, (const struct sockaddr*) cli_udp, cli_udp_addr_len);
+
+	/*
+	 * Create the receive thread.
+	 */
+	pthread_create(&recv_thread, NULL, &recv_tun, &stitch_conn);
+	pthread_create(&snd_thread, NULL, &send_tun, &stitch_conn);
+	pthread_join(recv_thread, (void**)&th_retval);
+	STITCH_DBG_LOG("Child thread returned with value:%p.\n", th_retval);
+	pthread_join(snd_thread, (void**)&th_retval);
+	STITCH_DBG_LOG("Child thread returned with value:%p.\n", th_retval);
+	exit(0);
+
 }

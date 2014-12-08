@@ -11,4 +11,5 @@
 #define ERR_CODE_UNKOWN_OPT 8
 #define ERR_CODE_TUN_FD_CLOSE 9
 #define ERR_CODE_FORK 10
+#define ERR_CODE_STITCH_DP_SOCKET 10
 #endif //__TUNCLIENT_H__  

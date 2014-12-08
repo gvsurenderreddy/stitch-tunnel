@@ -1,5 +1,6 @@
 #ifndef __STITCH_LOG_H__
 #define __STITCH_LOG_H__
+extern FILE* log_fd;
 #define STITCH_INFO_LOG(...) \
 	fprintf(log_fd, "INFO:");\
 	fprintf(log_fd, __VA_ARGS__);\

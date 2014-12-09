@@ -21,7 +21,6 @@ char log_file_name[] = "stitch_tun.log";
 FILE* log_fd;
 
 int main(int argc, char* argv[]) {
-	int if_fd;
 	/* Connect to the device */
 	int c, result, prefix_len;
 	int status, pid;
@@ -150,11 +149,11 @@ int main(int argc, char* argv[]) {
 	pid = fork();
 	if (pid == 0) {
 		STITCH_DBG_LOG("In child process executing ifconfig command for inet6 address %s\n", ip6);
-		status = execv("/bin/ifconfig", (char *[]){"ifconfig", stitch_conn.tun_dev, "inet6", "add", ip6, NULL});
-		if (status < 0) {
-			STITCH_ERR_LOG("Error occured executing the execv command:%s(%d)\n", strerror(errno), errno);
-		}
-		exit(errno);
+		/*
+		 * This function is supposed to launch an ifconfig command that is platform specific.
+		 * Ideally it should never return since it makes and execv call.
+		 */
+		tun_ip_config(stitch_conn.tun_dev, ip6);
 	}
 
 	if (pid < 0) {

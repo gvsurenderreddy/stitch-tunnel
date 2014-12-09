@@ -7,14 +7,13 @@
 #include <string.h>
 #include <errno.h>
 #include <pthread.h>
-#include "tun_pkt_hdlr.h"
-#include "tun_pkt_send.h"
-#include "stitch_log.h"
 #include <netinet/in.h>       // IPPROTO_TCP, INET6_ADDRSTRLEN
 #include <netinet/ip.h>       // IP_MAXPACKET (which is 65535)
 #include <netinet/ip6.h>      // struct ip6_hdr
 #include <net/ethernet.h>
-#include "linux/if_ether.h"
+#include "tun_pkt_hdlr.h"
+#include "tun_pkt_send.h"
+#include "stitch_log.h"
 
 void* send_tun(void* stitch_conn)
 {

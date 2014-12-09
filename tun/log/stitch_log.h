@@ -1,5 +1,9 @@
 #ifndef __STITCH_LOG_H__
 #define __STITCH_LOG_H__
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
 extern FILE* log_fd;
 #define STITCH_ERR_LOG(...) \
 	fprintf(log_fd, "ERROR:%s:",__FUNCTION__);\

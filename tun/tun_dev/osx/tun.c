@@ -13,6 +13,7 @@ int tun_alloc(char* dev)
 	int fd;
 
 	snprintf(dev_name, sizeof(dev_name), "/dev/%s", dev);
+	STITCH_DBG_LOG("Opening device %s\n", dev_name);
 	
 	fd = open(dev_name, O_RDWR);
 

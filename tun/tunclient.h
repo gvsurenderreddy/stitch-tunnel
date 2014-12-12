@@ -14,4 +14,8 @@
 #define ERR_CODE_TUN_FD_CLOSE 11
 #define ERR_CODE_FORK 12
 #define ERR_CODE_STITCH_DP_SOCKET 13
+
+#define STITCH_EXIT(EXIT_CODE) \
+	fclose(log_fd);\
+	exit(EXIT_CODE);
 #endif //__TUNCLIENT_H__  

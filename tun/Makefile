@@ -54,6 +54,7 @@ $(MODULES):
 
 clean:
 	$(RM) *.o *~ $(MAIN)
+	$(RM) -rf $(BUILD_DIR)
 
 depend: $(SRCS)
 	makedepend $(INCLUDES) $^

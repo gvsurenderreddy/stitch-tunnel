@@ -20,7 +20,7 @@ void* send_tun(void* stitch_conn)
 	int nread, nwrite;
 	char buffer[2048];
 	stitch_conn_descr_t *stitch_descr = (stitch_conn_descr_t*)stitch_conn;
-	STITCH_DBG_LOG("In child thread, waiting for packets from the tunnel.\n");
+	STITCH_DBG_LOG("In child thread, waiting for packets from stitch-dp.\n");
 	struct ip6_hdr *ip6hdr;
 	uint8_t ipver;
 	while(1) {

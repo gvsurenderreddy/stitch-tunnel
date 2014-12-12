@@ -20,7 +20,8 @@ void* recv_tun(void* stitch_conn)
 	int nread, nwrite;
 	char buffer[2048];
 	stitch_conn_descr_t *stitch_descr = (stitch_conn_descr_t*)stitch_conn;
-	STITCH_DBG_LOG("In child thread, waiting for packets from the tunnel.\n");
+	STITCH_DBG_LOG("In child thread, waiting for packets from the tunnel:%d.\n",
+	stitch_descr->stitch_tun_fd);
 	struct ip6_hdr *ip6hdr;
 	uint8_t ipver;
 	while(1) {
@@ -30,9 +31,10 @@ void* recv_tun(void* stitch_conn)
 		 * */               
 		nread = read(stitch_descr->stitch_tun_fd,buffer,sizeof(buffer));
 		if(nread < 0) {
-			STITCH_DBG_LOG("Tunnel interface closed.\n");
-			close(stitch_descr->stitch_tun_fd);
-			pthread_exit((void*)(-1));
+			STITCH_DBG_LOG("Tunnel interface not up.:%s\n", strerror(errno));
+			//close(stitch_descr->stitch_tun_fd);
+			//pthread_exit((void*)(-1));
+			continue;
 		}
 
 		/* Do whatever with the data */

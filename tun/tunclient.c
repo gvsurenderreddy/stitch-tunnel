@@ -35,23 +35,28 @@ int main(int argc, char* argv[]) {
 	struct sockaddr *cli_udp;
 	socklen_t cli_udp_addr_len;
 
-	strcpy(stitch_conn.tun_dev, "tun0");
-	stitch_conn.stitch_tun_fd = tun_alloc(stitch_conn.tun_dev);  /* tun interface */
 	log_fd = fopen(log_file_name, "w");
+	printf("Opening the log file %s\n", log_file_name);
 
 	if (!log_fd) {
+		printf("Couldn't open the log file.\n");
 		perror("Unable to open the log file");
-		exit(ERR_CODE_LOG);
+		STITCH_EXIT(ERR_CODE_LOG);
 	}
 
 	STITCH_INFO_LOG("*****Starting stitch log***********\n");
+
+	strcpy(stitch_conn.tun_dev, "tun0");
+	stitch_conn.stitch_tun_fd = tun_alloc(stitch_conn.tun_dev);  /* tun interface */
 
 
 
 
 	if(stitch_conn.stitch_tun_fd < 0){
 		STITCH_ERR_LOG("Allocating interface %s\n", strerror(errno));
-		exit(ERR_CODE_TUNN_CREATE);
+		STITCH_EXIT(ERR_CODE_TUNN_CREATE);
+	} else {
+		STITCH_DBG_LOG("Got tunnel device :%d\n", stitch_conn.stitch_tun_fd);
 	}
 
 	/* Tunnel creation successful. Now bring the tunnel up*/
@@ -60,7 +65,7 @@ int main(int argc, char* argv[]) {
 	if (status) {
 		/* We were not able to bring the tunnel device up*/
 		STITCH_ERR_LOG("We were not able to bring the tunnel up:%d\n", status);
-		exit(ERR_CODE_TUNN_UP);
+		STITCH_EXIT(ERR_CODE_TUNN_UP);
 	}
 
 
@@ -74,7 +79,7 @@ int main(int argc, char* argv[]) {
 				/*network address*/
 				if ((result = inet_pton(AF_INET6, optarg, &stitch_conn.tun_ip6_addr)) < 1) {
 					STITCH_ERR_LOG("Unable to convert argument:%s to IPv6 address.\n", optarg);
-					exit(4);
+					STITCH_EXIT(4);
 				}
 				STITCH_DBG_LOG("Got IPv6 address:%s\n", optarg);
 				//store the v6 address as a string representation
@@ -87,7 +92,7 @@ int main(int argc, char* argv[]) {
 				prefix_len = atoi(optarg);
 				if (prefix_len <= 0 || prefix_len > 128) {
 					STITCH_ERR_LOG("Invalid prefix length %d.!!\n", prefix_len);
-					exit(ERR_CODE_INCORRECT_PREFIX_LEN);
+					STITCH_EXIT(ERR_CODE_INCORRECT_PREFIX_LEN);
 				}
 				STITCH_DBG_LOG("Got prefix length:%d\n", prefix_len);
 				//append it to the ip6 string
@@ -101,7 +106,7 @@ int main(int argc, char* argv[]) {
 					STITCH_ERR_LOG("Unable to resolve the Stitch dataplane-module %s:%s\n", 
 							stitch_dp, strerror(errno)); 
 
-					exit(ERR_CODE_STITCH_DP);
+					STITCH_EXIT(ERR_CODE_STITCH_DP);
 				}
 				if (stitch_dp_addr->ai_family == AF_INET) {
 					inet_ntop(AF_INET, 
@@ -136,10 +141,10 @@ int main(int argc, char* argv[]) {
 				if (optopt == 'i' || optopt == 'p'){
 					STITCH_ERR_LOG("Option -%c requires an argument.\n", optopt);
 				}
-				exit(ERR_CODE_MISSING_ARG);
+				STITCH_EXIT(ERR_CODE_MISSING_ARG);
 			default:
 				STITCH_ERR_LOG("Unknown option %c.\n", optopt);
-				exit(ERR_CODE_UNKOWN_OPT);
+				STITCH_EXIT(ERR_CODE_UNKOWN_OPT);
 		}
 	}
 
@@ -154,18 +159,19 @@ int main(int argc, char* argv[]) {
 		 * Ideally it should never return since it makes and execv call.
 		 */
 		tun_ip_config(stitch_conn.tun_dev, ip6);
+		exit(0);
 	}
 
 	if (pid < 0) {
 		STITCH_ERR_LOG("Unable to fork ... \n");
-		exit(ERR_CODE_FORK);
+		STITCH_EXIT(ERR_CODE_FORK);
 	} else  {
 		STITCH_DBG_LOG("Waiting for the child process %d.\n", pid);
-		pid = waitpid(pid, &status, WNOHANG);
+		pid = waitpid(pid, &status, 0);
 		if (status != 0) {
 			STITCH_ERR_LOG("Was not able to configure IP address on tunnel interface:%d",
 			status);
-			exit(status);
+			STITCH_EXIT(status);
 		}
 		STITCH_DBG_LOG("Child process done.\n");
 	}
@@ -174,7 +180,7 @@ int main(int argc, char* argv[]) {
 	stitch_conn.stitch_dp_fd = socket(stitch_dp_addr->ai_family, SOCK_DGRAM, 0) ;
 	if (stitch_conn.stitch_dp_fd < 0 ) {
 		STITCH_ERR_LOG("Unable to create the stitch-datapath socket:%s\n", strerror(errno));
-		exit(ERR_CODE_STITCH_DP_SOCKET);
+		STITCH_EXIT(ERR_CODE_STITCH_DP_SOCKET);
 	}
 	/* bind the socket to a particular port */
 	bind(stitch_conn.stitch_dp_fd, (const struct sockaddr*) cli_udp, cli_udp_addr_len);
@@ -188,6 +194,6 @@ int main(int argc, char* argv[]) {
 	STITCH_DBG_LOG("Child thread returned with value:%p.\n", th_retval);
 	pthread_join(snd_thread, (void**)&th_retval);
 	STITCH_DBG_LOG("Child thread returned with value:%p.\n", th_retval);
-	exit(0);
+	STITCH_EXIT(0);
 
 }

@@ -65,7 +65,7 @@ int tun_alloc(char *dev) {
 int tun_ip_config(char* dev, char* ip6_addr) 
 {
 	int status;
-	 status = execv("/bin/ifconfig", (char *[]){"ifconfig", stitch_conn.tun_dev, "inet6", "add", ip6, NULL});
+	 status = execv("/bin/ifconfig", (char *[]){"ifconfig", dev, "inet6", "add", ip6_addr, NULL});
 	if (status < 0) {
 		STITCH_ERR_LOG("Error occured executing the execv command:%s(%d)\n", strerror(errno), errno);
 	}

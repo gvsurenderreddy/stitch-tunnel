@@ -22,7 +22,10 @@ STITCH_TUN_SRC = $(shell pwd)
 LIB_DIR = $(BUILD_DIR)/lib
 LIBRARIES = -ltun \
 	    -lpktprocess\
-	    -lpthread 
+	    -lpthread\
+	    -lssl\
+	    -lcrypto
+
 LIBRARY_PATH = -L$(BUILD_DIR)/lib
 
 # define the executable file 

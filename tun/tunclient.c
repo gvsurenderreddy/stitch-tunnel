@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <pthread.h>
+#include <openssl/sha.h>
 #include "tunclient.h"
 #include "log/stitch_log.h"
 #include "tun_dev/tun_dev.h"
@@ -34,6 +35,10 @@ int main(int argc, char* argv[]) {
 	struct sockaddr_in6 cli_udp_addr6;
 	struct sockaddr *cli_udp;
 	socklen_t cli_udp_addr_len;
+	const char str[] = "Test string";
+	unsigned char hash[SHA_DIGEST_LENGTH]; // == 20
+
+	SHA1(str, sizeof(str) - 1, hash);
 
 	log_fd = fopen(log_file_name, "w");
 	printf("Opening the log file %s\n", log_file_name);

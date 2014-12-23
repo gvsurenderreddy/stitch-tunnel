@@ -6,5 +6,6 @@ stitch_tun
 *.log
 build/
 *.dSYM
+core
 
 

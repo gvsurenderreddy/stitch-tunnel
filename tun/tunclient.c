@@ -35,10 +35,8 @@ int main(int argc, char* argv[]) {
 	struct sockaddr_in6 cli_udp_addr6;
 	struct sockaddr *cli_udp;
 	socklen_t cli_udp_addr_len;
-	const char str[] = "Test string";
-	unsigned char hash[SHA_DIGEST_LENGTH]; // == 20
+	unsigned char stitch_dev_hash[SHA_DIGEST_LENGTH]; // SHA1 hash == 20 bytes
 
-	SHA1(str, sizeof(str) - 1, hash);
 
 	log_fd = fopen(log_file_name, "w");
 	printf("Opening the log file %s\n", log_file_name);
@@ -78,7 +76,7 @@ int main(int argc, char* argv[]) {
 	 * Parse the command line parameters
 	 */
 	opterr = 0;
-	while ((c = getopt (argc, argv, "i:p:s:l")) != -1) {
+	while ((c = getopt (argc, argv, "i:p:s:l:d:")) != -1) {
 		switch(c) {
 			case  'i':
 				/*network address*/
@@ -142,8 +140,21 @@ int main(int argc, char* argv[]) {
 				STITCH_DBG_LOG("Resolved address for Stitch dataplane-module %s address-family:%d(AF_INET:%d, AF_INET6:%d),"
 				" ip:%s\n", stitch_dp, stitch_dp_addr->ai_family, AF_INET, AF_INET6, stitch_dp_ip6);
 				break;
+			case 'd': {
+				char str_sha1[64];
+				char str[8];
+				int i = 0;
+				/*Device-ID*/
+				SHA1((const unsigned char*)optarg, strlen(optarg), stitch_dev_hash);
+				for (i=0; i < SHA_DIGEST_LENGTH; i++) {
+					snprintf(str, sizeof(str), "%x", stitch_dev_hash[i]);
+					strncat(str_sha1, (const char*)str, 2);
+				} 
+				STITCH_DBG_LOG("SHA1 device ID: 0x%s\n", str_sha1);
+				break;
+			}
 			case '?':
-				if (optopt == 'i' || optopt == 'p'){
+				if (optopt == 'i' || optopt == 'p'|| optopt == 'd'){
 					STITCH_ERR_LOG("Option -%c requires an argument.\n", optopt);
 				}
 				STITCH_EXIT(ERR_CODE_MISSING_ARG);

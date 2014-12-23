@@ -49,6 +49,7 @@ def main():
                     print 'Device name:%s' % (json_stitch_resp['device_name'])
                     print 'Device model:%s' % (json_stitch_resp['device_model'])
                     print 'Network:%d' % (json_stitch_resp['network'])
+                    print 'Stitch ID:%s' % (json_stitch_resp['device_id'])
                     device = StitchDevice(json_stitch_resp['ip_addr'] 
                     , json_stitch_resp['ip_prefix_length']
                     , json_stitch_resp['device_name']
@@ -57,7 +58,12 @@ def main():
                     , json_stitch_resp['device_id'])
 
                     try:
-                        ret = subprocess.check_output(['./tun/stitch_tun','-i',str(device.ip.ip),'-p',str(device.ip.prefixlen),'-s','avi-mac'])
+                        ret = subprocess.check_output(['./tun/stitch_tun'
+                        ,'-i',str(device.ip.ip)
+                        ,'-p',str(device.ip.prefixlen)
+                        ,'-s','avi-mac'
+                        ,'-d', device.device_id
+                        ])
                     except subprocess.CalledProcessError as e:
                         print "Could not create the tunnel e"
 

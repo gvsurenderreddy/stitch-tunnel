@@ -53,6 +53,8 @@ int tun_alloc(char *dev) {
 	  */
 	strcpy(dev, ifr.ifr_name);
 
+	
+
 	/* this is the special file descriptor that the caller will use to talk
 	 * with the virtual interface 
 	 */

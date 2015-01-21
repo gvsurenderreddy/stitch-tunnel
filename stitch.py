@@ -48,20 +48,20 @@ def main():
                     print 'IP:%s/%d' % (json_stitch_resp['ip_addr'], json_stitch_resp['ip_prefix_length'])
                     print 'Device name:%s' % (json_stitch_resp['device_name'])
                     print 'Device model:%s' % (json_stitch_resp['device_model'])
-                    print 'Network:%d' % (json_stitch_resp['network'])
                     print 'Stitch ID:%s' % (json_stitch_resp['device_id'])
+                    print 'Stitch switch:%s' % (json_stitch_resp['network']['stitch_switch'])
                     device = StitchDevice(json_stitch_resp['ip_addr'] 
                     , json_stitch_resp['ip_prefix_length']
                     , json_stitch_resp['device_name']
                     , json_stitch_resp['device_model']
-                    , json_stitch_resp['network']
+                    , json_stitch_resp['network']['stitch_switch']
                     , json_stitch_resp['device_id'])
 
                     try:
                         ret = subprocess.check_output(['./tun/stitch_tun'
                         ,'-i',str(device.ip.ip)
                         ,'-p',str(device.ip.prefixlen)
-                        ,'-s','avi-mac'
+                        ,'-s',device.stitch_switch
                         ,'-d', device.device_id
                         ])
                     except subprocess.CalledProcessError as e:

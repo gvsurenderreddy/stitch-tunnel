@@ -20,6 +20,8 @@
 
 char log_file_name[] = "stitch_tun.log";
 FILE* log_fd;
+uint8_t __info__;
+uint8_t __debug__;
 
 int main(int argc, char* argv[]) {
 	/* Connect to the device */
@@ -76,6 +78,8 @@ int main(int argc, char* argv[]) {
 	 * Parse the command line parameters
 	 */
 	opterr = 0;
+	__info__ = 0;
+	__debug__ = 0;
 	while ((c = getopt (argc, argv, "i:p:s:l:d:")) != -1) {
 		switch(c) {
 			case  'i':

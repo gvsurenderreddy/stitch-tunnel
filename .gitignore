@@ -7,5 +7,7 @@ stitch_tun
 build/
 *.dSYM
 core
+*.gz
+
 
 

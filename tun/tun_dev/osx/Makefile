@@ -1,5 +1,4 @@
-CFLAGS=-Wall -g -D$(OS)
-CC = gcc
+include $(STITCH_TUN_SRC)/platform.mk 
 INCLUDES = -I./\
  	   -I$(STITCH_TUN_SRC)/\
  	   -I$(STITCH_TUN_SRC)/log/

@@ -1,5 +1,4 @@
-CFLAGS=-Wall -g -D$(OS)
-CC = gcc
+include $(STITCH_TUN_SRC)/platform.mk
 INCLUDES = -I./ \
  	   -I./tun_dev\
 	   -I./log
@@ -23,8 +22,9 @@ LIB_DIR = $(BUILD_DIR)/lib
 LIBRARIES = -ltun \
 	    -lpktprocess\
 	    -lpthread\
-	    -lssl\
-	    -lcrypto
+	    $(OPENSSL_SUPPORT_LIB)
+
+
 
 LIBRARY_PATH = -L$(BUILD_DIR)/lib
 

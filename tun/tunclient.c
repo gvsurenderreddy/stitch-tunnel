@@ -10,7 +10,9 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <pthread.h>
+#ifdef OPENSSL_SUPPORT
 #include <openssl/sha.h>
+#endif
 #include "tunclient.h"
 #include "log/stitch_log.h"
 #include "tun_dev/tun_dev.h"
@@ -37,7 +39,9 @@ int main(int argc, char* argv[]) {
 	struct sockaddr_in6 cli_udp_addr6;
 	struct sockaddr *cli_udp;
 	socklen_t cli_udp_addr_len;
+#ifdef OPENSSL_SUPPORT
 	unsigned char stitch_dev_hash[SHA_DIGEST_LENGTH]; // SHA1 hash == 20 bytes
+#endif
 
 
 	log_fd = fopen(log_file_name, "w");
@@ -145,16 +149,20 @@ int main(int argc, char* argv[]) {
 				" ip:%s\n", stitch_dp, stitch_dp_addr->ai_family, AF_INET, AF_INET6, stitch_dp_ip6);
 				break;
 			case 'd': {
+#ifdef OPENSSL_SUPPORT
 				char str_sha1[64];
 				char str[8];
 				int i = 0;
 				/*Device-ID*/
 				SHA1((const unsigned char*)optarg, strlen(optarg), stitch_dev_hash);
-				for (i=0; i < SHA_DIGEST_LENGTH; i++) {
+				for (i=0; i < DIGEST_LENGTH; i++) {
 					snprintf(str, sizeof(str), "%x", stitch_dev_hash[i]);
 					strncat(str_sha1, (const char*)str, 2);
 				} 
 				STITCH_DBG_LOG("SHA1 device ID: 0x%s\n", str_sha1);
+#else
+				STITCH_DBG_LOG("No SSL support, so not generating device ID");
+#endif
 				break;
 			}
 			case '?':

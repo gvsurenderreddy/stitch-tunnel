@@ -1,3 +1,4 @@
+include $(STITCH_TUN_SRC)/platform.mk 
 ifeq ($(OS), LINUX)
 MODULES=linux
 else

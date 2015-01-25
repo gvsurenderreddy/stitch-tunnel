@@ -9,6 +9,12 @@
 
 #define IFTUNNAMESZ 80
 
+#ifdef TARGET_RASPBERRYPI
+#define IFCONFIG "/sbin/ifconfig"
+#else 
+#define IFCONFIG "/bin/ifconfig"
+#endif
+
 /*Error codes*/
 int tun_alloc(char *dev);
 int tun_up(char *dev);

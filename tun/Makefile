@@ -40,7 +40,8 @@ MAIN = stitch_tun
 all:    $(MAIN)
 	@echo Compiled $(MAIN) .... 
 #
-$(MAIN): $(MODULES) 
+$(MAIN): $(MODULES)
+	sudo rm -rf $(MAIN)
 	$(CC) $(CFLAGS) $(INCLUDES) $(SRCS) -o $(MAIN) $(LIBRARY_PATH) $(LIBRARIES) $(LFLAGS)
 
 $(MODULES):
@@ -56,8 +57,13 @@ $(MODULES):
 	$(CC) $(CFLAGS) $(INCLUDES) -c $<  -o $@
 
 clean:
-	$(RM) *.o *~ $(MAIN)
+	$(RM) *.o *~
+	sudo $(RM) $(MAIN)
 	$(RM) -rf $(BUILD_DIR)
+
+install:
+	sudo chown root $(MAIN)
+	sudo chmod +s $(MAIN)
 
 depend: $(SRCS)
 	makedepend $(INCLUDES) $^

@@ -204,6 +204,13 @@ int main(int argc, char* argv[]) {
 		STITCH_DBG_LOG("Child process done.\n");
 	}
 
+    /*
+     * Set the MTU on the interface
+     */
+    if(tun_set_mtu(stitch_conn.tun_dev, 1280) < 0) {
+        STITCH_ERR_LOG("Unable to set MTU of tunnel device to 1280\n");
+    }
+
 	/*Create a UDP socket to create the external tunnel to the stitch datapath-plane*/
 	stitch_conn.stitch_dp_fd = socket(stitch_dp_addr->ai_family, SOCK_DGRAM, 0) ;
 	if (stitch_conn.stitch_dp_fd < 0 ) {

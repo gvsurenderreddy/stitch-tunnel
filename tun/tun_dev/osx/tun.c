@@ -3,6 +3,9 @@
 #include <strings.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <net/if.h>
 
 #include "log/stitch_log.h"
 
@@ -38,6 +41,25 @@ int tun_ip_config(char* dev, char* ip6_addr)
 		STITCH_ERR_LOG("Error occured executing the execv command:%s(%d)\n", strerror(errno), errno);
 	}
 	exit(errno);
+}
+
+/*
+ * Set the tunnel MTU
+ */
+int tun_set_mtu(char *dev, int mtu) 
+{
+    struct ifreq ifr;
+    int s = socket(AF_INET, SOCK_DGRAM, 0);
+    strncpy(ifr.ifr_name, dev, sizeof(ifr.ifr_name));
+
+    ifr.ifr_mtu  = mtu;
+    if ( ioctl(s, SIOCSIFMTU, (caddr_t)&ifr) ) {
+        printf("Cannot SIOCSIFMTU %s:%s\n",dev, strerror(errno));
+        return -1;
+    } else {
+        return 0;
+    }
+
 }
 
 
